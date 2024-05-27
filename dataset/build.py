@@ -6,7 +6,6 @@ import typing
 import orjson
 import requests as r
 
-
 _BASE_URL = (
     "https://firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel"
 )
@@ -168,6 +167,8 @@ class SonautoAPI:
             ) as resp:
                 with open(f"./dataset/audio/{nbm_file}.ogg", "wb") as file:
                     file.write(resp.content)
+
+            print(f"Downloaded {nbm_file} songs", end="\r")
 
     def download(self, nb_element: int = 10) -> None:
         """Method to download the data
