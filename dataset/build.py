@@ -25,6 +25,10 @@ _HEADERS = {
 
 
 class SonautoAPI:
+    """
+    Class to download the audio from sonauto for finetuning the whisper model
+    """
+
     def __init__(self):
         self.session = r.Session()
         self._zx = "".join(
