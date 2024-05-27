@@ -1,3 +1,4 @@
+import os
 import random
 import re
 import typing
@@ -29,7 +30,7 @@ class SonautoAPI:
     Class to download the audio from sonauto for finetuning the whisper model
     """
 
-    def __init__(self):
+    def __init__(self, clean: bool = False):
         self.session = r.Session()
         self._zx = "".join(
             random.choice("abcdefghijklmnopqrstuvwxyz1234567890") for i in range(10)
@@ -37,6 +38,11 @@ class SonautoAPI:
 
         self._aid = 0
         self._limit_results = 25
+
+        self._init_dir()
+
+        if clean:
+            self._clean_dir()
 
     def _get_url(self, gsession_id: str = None, sess_id: str = None) -> str:
         """
@@ -124,19 +130,55 @@ class SonautoAPI:
 
         return sess_id, gsession_id
 
-    def download(self, nb_element: int = 10) -> dict:
+    def _init_dir(self) -> None:
+        """Method to init the directory"""
+
+        if not os.path.exists("./dataset/lyrics"):
+            os.makedirs("./dataset/lyrics")
+
+        if not os.path.exists("./dataset/audio"):
+            os.makedirs("./dataset/audio")
+
+    def _clean_dir(self) -> None:
+        """Method to clean the directory"""
+
+        for file in os.listdir("./dataset/lyrics"):
+            os.remove(f"./dataset/lyrics/{file}")
+
+        for file in os.listdir("./dataset/audio"):
+            os.remove(f"./dataset/audio/{file}")
+
+    def _construct_ds(self, audio_data: dict) -> None:
+        """Method to construct the dataset
+
+        Args:
+            audio_data (dict): the audio data
+        """
+
+        for _, value in audio_data.items():
+            nbm_file = len(
+                [i for i in os.listdir("./dataset/lyrics") if i.endswith(".txt")]
+            )
+
+            with open(f"./dataset/lyrics/{nbm_file}.txt", "w") as file:
+                file.write(value["lyrics"])
+
+            with self.session.get(
+                "https://cdn.sonauto.ai/generations/" + value["audio_url"]
+            ) as resp:
+                with open(f"./dataset/audio/{nbm_file}.ogg", "wb") as file:
+                    file.write(resp.content)
+
+    def download(self, nb_element: int = 10) -> None:
         """Method to download the data
 
         Args:
             nb_element (int, optional): the number of item to download. Defaults to 10.
-
-        Returns:
-            dict: The data
         """
 
+        nbm_dl_song = 0
         out = {}
-
-        while len(out.keys()) < nb_element:
+        while nbm_dl_song < nb_element:
             sess_id, gsession_id = self._get_session_id(len(out.keys()))
 
             with self.session.get(
@@ -159,7 +201,9 @@ class SonautoAPI:
                         "prompt": element["fields"]["prompt"]["stringValue"],
                     }
 
-                    if len(out.keys()) >= nb_element:
+                    nbm_dl_song += 1
+                    if nbm_dl_song >= nb_element:
                         break
 
-        return out
+            self._construct_ds(out)
+            out = {}
