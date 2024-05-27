@@ -90,21 +90,10 @@ class SonautoAPI:
                 "query": {
                     "structuredQuery": {
                         "from": [{"collectionId": "songs"}],
-                        "where": {
-                            "fieldFilter": {
-                                "field": {"fieldPath": "public"},
-                                "op": "EQUAL",
-                                "value": {"booleanValue": True},
-                            }
-                        },
                         "orderBy": [
                             {
-                                "field": {"fieldPath": "createdAt"},
-                                "direction": "DESCENDING",
-                            },
-                            {
-                                "field": {"fieldPath": "__name__"},
-                                "direction": "DESCENDING",
+                                "field": {"fieldPath": "projectId"},
+                                "direction": "ASCENDING",
                             },
                         ],
                         "limit": self._limit_results,
@@ -186,22 +175,23 @@ class SonautoAPI:
                 self._get_url(gsession_id, sess_id), headers=_HEADERS
             ) as resp:
                 size = int(resp.text.split("\n")[0])
+                if size < 1000:#too small (finishing the loop)
+                    break
                 content = "\n".join(resp.text.split("\n")[1:])[:size]
-
+                if re.search(r"\]\d{2,}(\\n|\n)", content):
+                    content = re.sub(r"\]\d{2,}(\\n|\n)", "", content)
+                    content += "]"
                 json_data = orjson.loads(content)
 
                 for element in json_data:
                     if "documentChange" not in element[1][0]:
                         continue
-
                     element = element[1][0]["documentChange"]["document"]
-
                     out[str(len(out.keys()))] = {
                         "lyrics": element["fields"]["lyrics"]["stringValue"],
                         "audio_url": element["fields"]["audioPath"]["stringValue"],
                         "prompt": element["fields"]["prompt"]["stringValue"],
                     }
-
                     nbm_dl_song += 1
                     if nbm_dl_song >= nb_element:
                         break
