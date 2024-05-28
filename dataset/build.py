@@ -157,7 +157,7 @@ class SonautoAPI:
                 with open(f"./dataset/audio/{nbm_file}.ogg", "wb") as file:
                     file.write(resp.content)
 
-            print(f"Downloaded {nbm_file} songs", end="\r")
+            print(f"Downloaded {nbm_file} songs.", end="\r")
 
     def download(self, nb_element: int = 10) -> None:
         """Method to download the data
@@ -168,6 +168,7 @@ class SonautoAPI:
 
         nbm_dl_song = 0
         out = {}
+
         while nbm_dl_song < nb_element:
             sess_id, gsession_id = self._get_session_id(len(out.keys()))
 
@@ -175,8 +176,9 @@ class SonautoAPI:
                 self._get_url(gsession_id, sess_id), headers=_HEADERS
             ) as resp:
                 size = int(resp.text.split("\n")[0])
-                if size < 1000:#too small (finishing the loop)
-                    break
+                if size < 1000:  # too small (finishing the loop)
+                    continue
+
                 content = "\n".join(resp.text.split("\n")[1:])[:size]
                 if re.search(r"\]\d{2,}(\\n|\n)", content):
                     content = re.sub(r"\]\d{2,}(\\n|\n)", "", content)
@@ -186,6 +188,7 @@ class SonautoAPI:
                 for element in json_data:
                     if "documentChange" not in element[1][0]:
                         continue
+
                     element = element[1][0]["documentChange"]["document"]
                     out[str(len(out.keys()))] = {
                         "lyrics": element["fields"]["lyrics"]["stringValue"],
