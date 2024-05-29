@@ -3,16 +3,15 @@ This module contains the Trainer class which is responsible for training whisper
 """
 import warnings
 
+import evaluate
 import librosa
 import numpy as np
 import torch
-from datasets import Audio, Dataset
+from datasets import Dataset
 from transformers import WhisperProcessor, WhisperForConditionalGeneration, Seq2SeqTrainingArguments, Seq2SeqTrainer
-
-from training import utils
-from training.collator import DataCollatorSpeechSeq2SeqWithPadding
 from transformers.models.whisper.english_normalizer import BasicTextNormalizer
-import evaluate
+
+from training.collator import DataCollatorSpeechSeq2SeqWithPadding
 
 METRIC = evaluate.load("wer")
 
