@@ -10,6 +10,9 @@ import torch
 
 @dataclass
 class DataCollatorSpeechSeq2SeqWithPadding:
+    """
+    Data collator that will dynamically pad the inputs received.
+    """
     processor: Any
 
     def __call__(

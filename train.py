@@ -2,7 +2,7 @@ from datasets import DatasetDict
 
 from training.train import Trainer
 
-import training.utils as utils
+from training import utils
 
 LOAD_DATASET = True
 

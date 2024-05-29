@@ -57,6 +57,7 @@ class Trainer:
         :return: None
         """
         def prepare_dataset(example):
+            target_sr = self.processor.feature_extractor.sampling_rate
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=FutureWarning)
                 warnings.filterwarnings("ignore", category=UserWarning)
@@ -64,12 +65,12 @@ class Trainer:
             audio = librosa.resample(
                 np.asarray(audio),
                 orig_sr=sr,
-                target_sr=self.processor.feature_extractor.sampling_rate
+                target_sr=target_sr,
             )
 
             example = self.processor(
                 audio=audio,
-                sampling_rate=self.processor.feature_extractor.sampling_rate,
+                sampling_rate=target_sr,
                 text=example["lyrics"],
             )
 
@@ -159,5 +160,3 @@ class Trainer:
             tokenizer=self.processor,
         )
         return trainer.train()
-
-
