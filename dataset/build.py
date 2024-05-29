@@ -6,6 +6,7 @@ import typing
 import orjson
 import requests as r
 
+
 _BASE_URL = (
     "https://firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel"
 )
@@ -105,7 +106,7 @@ class SonautoAPI:
             },
         }
 
-        req += orjson.dumps(body).decode("utf-8")
+        req += orjson.dumps(body).decode("utf-8")  # pylint: disable=no-member
         response = self.session.post(self._get_url(), headers=_HEADERS, data=req)
 
         if response.status_code != 200:
@@ -148,7 +149,9 @@ class SonautoAPI:
                 [i for i in os.listdir("./dataset/lyrics") if i.endswith(".txt")]
             )
 
-            with open(f"./dataset/lyrics/{nbm_file}.txt", "w") as file:
+            with open(
+                f"./dataset/lyrics/{nbm_file}.txt", "w", encoding="utf-8"
+            ) as file:
                 file.write(value["lyrics"])
 
             with self.session.get(
@@ -185,7 +188,7 @@ class SonautoAPI:
                 if re.search(r"\]\d{2,}(\\n|\n)", content):
                     content = re.sub(r"\]\d{2,}(\\n|\n)", "", content)
                     content += "]"
-                json_data = orjson.loads(content)
+                json_data = orjson.loads(content)  # pylint: disable=no-member
 
                 for element in json_data:
                     if "documentChange" not in element[1][0]:
