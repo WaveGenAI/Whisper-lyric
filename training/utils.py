@@ -20,10 +20,10 @@ def gather_dataset(path: str) -> Dataset:
         audios = glob.glob(path + "/audio/*")
         lyrics = glob.glob(path + "/lyrics/*.txt")
         for audio, lyric in zip(audios, lyrics):
-            with open(lyrics[i], "r") as f:
-                lyrics = f.read()
+            with open(lyric, "r") as f:
+                lyric = f.read()
             yield {
-                "audio": audio[i],
-                "lyrics": lyrics,
+                "audio": audio,
+                "lyrics": lyric,
             }
     return Dataset.from_generator(gen)
