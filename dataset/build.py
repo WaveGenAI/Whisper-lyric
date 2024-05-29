@@ -154,7 +154,9 @@ class SonautoAPI:
             with self.session.get(
                 "https://cdn.sonauto.ai/generations/" + value["audio_url"]
             ) as resp:
-                with open(f"./dataset/audio/{nbm_file}.ogg", "wb") as file:
+                extension = value["audio_url"].split(".")[-1]
+                with open(f"./dataset/audio/{nbm_file}.{extension}", "wb") as file:
+
                     file.write(resp.content)
 
             print(f"Downloaded {nbm_file} songs.", end="\r")
