@@ -1,11 +1,15 @@
 """
 This module contains the Trainer class which is responsible for training whisper on predicting lyrics.
 """
+import warnings
 
+import librosa
+import numpy as np
 import torch
-from datasets import DatasetDict, Audio
+from datasets import Audio, Dataset
 from transformers import WhisperProcessor, WhisperForConditionalGeneration, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
+from training import utils
 from training.collator import DataCollatorSpeechSeq2SeqWithPadding
 from transformers.models.whisper.english_normalizer import BasicTextNormalizer
 import evaluate
@@ -19,9 +23,11 @@ class Trainer:
     """
     A class that represents the trainer for the whisper model.
     """
-    def __init__(self, dataset: DatasetDict, model_name="openai/whisper-small", ):
+    def __init__(self, dataset=None, model_name="openai/whisper-small", ):
         """
         The constructor for the Trainer class.
+        The dataset is optional and can be added later with the method process_dataset.
+        The dataset should be formated and already mapped to the columns "audio" and "lyrics" and ready for training.
         :param dataset: The dataset to train the model on.
         """
         self.processor = WhisperProcessor.from_pretrained(
@@ -30,9 +36,6 @@ class Trainer:
         )
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         self.dataset = dataset
-        self.dataset = self.dataset.select_columns(["audio", "lyrics"])
-        sampling_rate = self.processor.feature_extractor.sampling_rate
-        self.dataset = self.dataset.cast_column("audio", Audio(sampling_rate=sampling_rate))
         self.data_collator = DataCollatorSpeechSeq2SeqWithPadding(self.processor)
         self.prepare_tokenizer()
 
@@ -49,31 +52,46 @@ class Trainer:
         self.processor.tokenizer.add_special_tokens({"additional_special_tokens": special_tokens_to_add})
         self.model.resize_token_embeddings(len(self.processor.tokenizer))
 
-    def process_dataset(self) -> None:
+    def process_dataset(self, dataset) -> Dataset:
         """
         A method that processes the dataset.
         :return: None
         """
         def prepare_dataset(example):
-            audio = example["audio"]
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                warnings.filterwarnings("ignore", category=UserWarning)
+                audio, sr = librosa.load(example["audio"], sr=None)
+            audio = librosa.resample(
+                np.asarray(audio),
+                orig_sr=sr,
+                target_sr=self.processor.feature_extractor.sampling_rate
+            )
 
             example = self.processor(
-                audio=audio["array"],
-                sampling_rate=audio["sampling_rate"],
+                audio=audio,
+                sampling_rate=self.processor.feature_extractor.sampling_rate,
                 text=example["lyrics"],
             )
 
             # compute input length of audio sample in seconds
-            example["input_length"] = len(audio["array"]) / audio["sampling_rate"]
+            example["input_length"] = len(audio) / sr
 
             return example
 
-        self.dataset = self.dataset.map(
+        self.dataset = dataset.map(
             prepare_dataset,
-            remove_columns=self.dataset.column_names["train"],
+            remove_columns=dataset.column_names["train"],
+            num_proc=1,
         )
+        return self.dataset
 
     def compute_metrics(self, pred):
+        """
+        A method that computes the metrics.
+        :param pred: The predictions of the model.
+        :return: The metrics.
+        """
         pred_ids = pred.predictions
         label_ids = pred.label_ids
 
@@ -111,8 +129,9 @@ class Trainer:
         """
         training_args = Seq2SeqTrainingArguments(
             output_dir="./train",
-            per_device_train_batch_size=4,
+            per_device_train_batch_size=8,
             per_device_eval_batch_size=4,
+            num_train_epochs=1,
             learning_rate=1e-5,
             lr_scheduler_type="linear",
             warmup_steps=50,
@@ -124,7 +143,7 @@ class Trainer:
             evaluation_strategy="epoch",
             optim="adamw_8bit",
             predict_with_generate=True,
-            generation_max_length=225,
+            generation_max_length=512,
             logging_steps=25,
             metric_for_best_model="wer",
             greater_is_better=False,

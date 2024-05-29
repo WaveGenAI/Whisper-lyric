@@ -1,3 +1,7 @@
+"""
+This file contains the data collator for the Speech2Text model.
+"""
+
 from dataclasses import dataclass
 from typing import Any, Dict, Union, List
 
@@ -11,6 +15,11 @@ class DataCollatorSpeechSeq2SeqWithPadding:
     def __call__(
         self, features: List[Dict[str, Union[List[int], torch.Tensor]]]
     ) -> Dict[str, torch.Tensor]:
+        """
+        This method pads the input features and the labels to the maximum length in the batch and return it.
+        :param features: The features to pad.
+        :return: The padded features.
+        """
         # split inputs and labels since they have to be of different lengths and need different padding methods
         # first treat the audio inputs by simply returning torch tensors
         input_features = [
