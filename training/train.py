@@ -147,7 +147,6 @@ class Trainer:
             logging_steps=25,
             metric_for_best_model="wer",
             greater_is_better=False,
-            push_to_hub=True,
         )
 
         trainer = Seq2SeqTrainer(
