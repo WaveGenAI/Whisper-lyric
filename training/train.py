@@ -36,7 +36,7 @@ class Trainer:
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         self.dataset = dataset
         self.data_collator = DataCollatorSpeechSeq2SeqWithPadding(self.processor)
-        self.prepare_tokenizer()
+        # self.prepare_tokenizer()
 
     def prepare_tokenizer(self) -> None:
         """
@@ -51,7 +51,7 @@ class Trainer:
         self.processor.tokenizer.add_special_tokens({"additional_special_tokens": special_tokens_to_add})
         self.model.resize_token_embeddings(len(self.processor.tokenizer))
 
-    def process_dataset(self, dataset) -> Dataset:
+    def process_dataset(self, dataset, chunk_id) -> Dataset:
         """
         A method that processes the dataset.
         :return: None
@@ -78,10 +78,10 @@ class Trainer:
             example["input_length"] = len(audio) / sr
 
             return example
-
-        self.dataset = dataset.map(
+        small_dataset = Dataset.from_dict(dataset[chunk_id*1000:chunk_id*1000+1000])
+        self.dataset = small_dataset.map(
             prepare_dataset,
-            remove_columns=dataset.column_names["train"],
+            remove_columns=small_dataset.column_names,
             num_proc=1,
         )
         return self.dataset

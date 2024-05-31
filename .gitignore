@@ -163,6 +163,7 @@ dataset/audio/
 dataset/lyrics/
 dataset/data.json
 train/
+model/
 formated_dataset/
 
 test.py
