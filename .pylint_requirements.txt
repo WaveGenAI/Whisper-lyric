@@ -1,0 +1,13 @@
+requests
+orjson
+jiwer
+transformers
+torch
+torchaudio
+datasets
+accelerate
+bitsandbytes
+evaluate
+librosa
+numpy
+
