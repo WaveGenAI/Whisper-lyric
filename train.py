@@ -6,5 +6,6 @@ dataset = dataset.train_test_split(test_size=0.1)
 
 trainer = Trainer(dataset)
 dataset = trainer.process_dataset(dataset)
-
 trainer.train()
+
+trainer.save_model("./train")

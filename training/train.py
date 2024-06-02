@@ -172,3 +172,12 @@ class Trainer:
             tokenizer=self.processor,
         )
         return trainer.train()
+
+    def save_model(self, path: str) -> None:
+        """
+        A method that saves the model.
+        :param path: The path to save the model.
+        :return: None
+        """
+
+        self.model.save_pretrained(path)
