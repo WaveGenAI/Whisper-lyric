@@ -34,7 +34,7 @@ class DatasetProcess:
         self.export_path = export_path
         self.sample_rate = sample_rate
 
-        if clean and self.export_path and os.path.exists(self.export_path):
+        if clean and self.export_path:
             self.remove_export_folder()
 
         self.create_export_folder()

@@ -18,7 +18,6 @@ def gather_dataset(path: str) -> Dataset:
     """
 
     def gen():
-        i = 0  # use to regenerate the dataset
         audios = glob.glob(path + "/audio/*")
         lyrics = glob.glob(path + "/lyrics/*.txt")
         for audio, lyric in zip(audios, lyrics):
