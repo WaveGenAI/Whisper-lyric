@@ -14,6 +14,7 @@ class DatasetProcess:
         self,
         lyric_path: str,
         audio_path: str,
+        sample_rate: int = None,
         export_path: str = None,
         clean: bool = False,
     ):
@@ -22,6 +23,7 @@ class DatasetProcess:
         Args:
             lyric_path (str): the path to the lyrics folder
             audio_path (str): the path to the audio folder
+            sample_rate (int, optional): the sample rate of the audio. Defaults to None.
             export_path (str, optional): the path to export data. Defaults to None.
             clean (bool, optional): remove all data in the export path. Defaults to False.
         """
@@ -29,6 +31,7 @@ class DatasetProcess:
         self.lyric_path = lyric_path
         self.audio_path = audio_path
         self.export_path = export_path
+        self.sample_rate = sample_rate
 
         if clean:
             self.remove_export_folder()
@@ -122,6 +125,9 @@ class DatasetProcess:
 
             if self.export_path:
                 path = f"{self.export_path}/audio/{file_name}_{i}.wav"
+
+            if self.sample_rate:
+                audio = audio.set_frame_rate(self.sample_rate)
 
             audio.export(path, format="wav")
 
