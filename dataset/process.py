@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import List
 
 from pydub import AudioSegment
@@ -33,7 +34,7 @@ class DatasetProcess:
         self.export_path = export_path
         self.sample_rate = sample_rate
 
-        if clean:
+        if clean and self.export_path and os.path.exists(self.export_path):
             self.remove_export_folder()
 
         self.create_export_folder()
@@ -56,7 +57,7 @@ class DatasetProcess:
         """Method to remove the export folder"""
 
         if os.path.exists(self.export_path):
-            os.rmdir(self.export_path)
+            shutil.rmtree(self.export_path)
 
     def _split_audio(
         self, audio_path: str, split_windows: int = 32

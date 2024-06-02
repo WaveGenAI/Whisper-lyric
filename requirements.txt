@@ -11,3 +11,4 @@ evaluate
 librosa
 numpy
 aeneas
+pydub
