@@ -35,6 +35,16 @@ dataset
 
 where `0.wav` corresponds to the audio file and `0.txt` corresponds to the lyrics transcription of the audio file.
 
+## Process the dataset
+
+To process the dataset, run the following command:
+
+```bash
+python process_dataset.py --clean
+```
+
+The process will split the audio in chunks of 32 seconds and split the lyrics.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
