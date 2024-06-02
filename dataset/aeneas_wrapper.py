@@ -6,57 +6,61 @@ from aeneas.tools.execute_task import ExecuteTaskCLI, RuntimeConfiguration
 
 from dataset.exceptions import AeneasAlignError
 
-rconf = RuntimeConfiguration()
-rconf[RuntimeConfiguration.MFCC_MASK_NONSPEECH] = True
-rconf[RuntimeConfiguration.MFCC_MASK_NONSPEECH_L3] = True
-rconf[RuntimeConfiguration.TTS_CACHE] = True
-rconf.set_granularity(3)
 
+class AeneasWrapper:
+    """Wrapper class for Aeneas CLI"""
 
-def aeneas_cli_exec(audio_path: str, lyric_path: str) -> dict:
-    """Align lyrics with audio
+    def __init__(self) -> None:
+        self._rconf = RuntimeConfiguration()
+        self._rconf[RuntimeConfiguration.MFCC_MASK_NONSPEECH] = True
+        self._rconf[RuntimeConfiguration.MFCC_MASK_NONSPEECH_L3] = True
+        self._rconf[RuntimeConfiguration.TTS_CACHE] = True
+        self._rconf.set_granularity(3)
 
-    Args:
-        audio_path (str): the path to the audio file
-        lyric_path (str): the path to the lyric file
+    def aeneas_cli_exec(self, audio_path: str, lyric_path: str) -> dict:
+        """Align lyrics with audio
 
-    Raises:
-        AeneasAlignError: if Aeneas fails to align lyrics
+        Args:
+            audio_path (str): the path to the audio file
+            lyric_path (str): the path to the lyric file
 
-    Returns:
-        dict: a dictionary containing the alignment data
-    """
+        Raises:
+            AeneasAlignError: if Aeneas fails to align lyrics
 
-    tmp_dir = tempfile.mkdtemp()
+        Returns:
+            dict: a dictionary containing the alignment data
+        """
 
-    with open(lyric_path, "r", encoding="utf-8") as f:
-        lyric = f.read()
+        tmp_dir = tempfile.mkdtemp()
 
-    # remove all text between []
-    lyric = re.sub(r"\[.*?\]", "\n", lyric)
+        with open(lyric_path, "r", encoding="utf-8") as f:
+            lyric = f.read()
 
-    # remove when more than 2 new lines
-    lyric = re.sub(r"\n{1,}", "\n", lyric).strip()
+        # remove all text between []
+        lyric = re.sub(r"\[.*?\]", "\n", lyric)
 
-    lyric = lyric.replace(" ", "\n")
+        # remove when more than 2 new lines
+        lyric = re.sub(r"\n{1,}", "\n", lyric).strip()
 
-    with open(f"{tmp_dir}/lyric.txt", "w", encoding="utf-8") as f:
-        f.write(lyric)
+        lyric = lyric.replace(" ", "\n")
 
-    args = [
-        "dummy",
-        audio_path,
-        f"{tmp_dir}/lyric.txt",
-        "task_language=en|is_text_type=plain|os_task_file_format=json",
-        f"{tmp_dir}/lyric.json",
-    ]
+        with open(f"{tmp_dir}/lyric.txt", "w", encoding="utf-8") as f:
+            f.write(lyric)
 
-    exit_code = ExecuteTaskCLI(use_sys=False, rconf=rconf).run(arguments=args)
+        args = [
+            "dummy",
+            audio_path,
+            f"{tmp_dir}/lyric.txt",
+            "task_language=en|is_text_type=plain|os_task_file_format=json",
+            f"{tmp_dir}/lyric.json",
+        ]
 
-    if exit_code != 0:
-        raise AeneasAlignError("Aeneas failed to align lyrics")
+        exit_code = ExecuteTaskCLI(use_sys=False, rconf=self._rconf).run(arguments=args)
 
-    with open(f"{tmp_dir}/lyric.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
+        if exit_code != 0:
+            raise AeneasAlignError("Aeneas failed to align lyrics")
 
-    return data
+        with open(f"{tmp_dir}/lyric.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return data

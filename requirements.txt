@@ -9,5 +9,5 @@ accelerate
 bitsandbytes
 evaluate
 librosa
-aeneas
 numpy
+aeneas

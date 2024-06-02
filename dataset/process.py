@@ -1,37 +1,84 @@
 import os
+from typing import List
 
 from pydub import AudioSegment
 
 import dataset.exceptions
-from dataset.aeneas_wrapper import aeneas_cli_exec
+from dataset.aeneas_wrapper import AeneasWrapper
 
 
-class Process:
+class DatasetProcess:
     """Class to process the dataset"""
 
-    def __init__(self, lyric_path: str, audio_path: str):
+    def __init__(
+        self,
+        lyric_path: str,
+        audio_path: str,
+        export_path: str = None,
+        clean: bool = False,
+    ):
+        """Constructor to initialize the DatasetProcess class
+
+        Args:
+            lyric_path (str): the path to the lyrics folder
+            audio_path (str): the path to the audio folder
+            export_path (str, optional): the path to export data. Defaults to None.
+            clean (bool, optional): remove all data in the export path. Defaults to False.
+        """
+
         self.lyric_path = lyric_path
         self.audio_path = audio_path
+        self.export_path = export_path
 
-    def _aenas_align(self, audio_path: str, lyric_path: str) -> dict:
-        """Method to align lyrics with audio
+        if clean:
+            self.remove_export_folder()
+
+        self.create_export_folder()
+
+        self.aeneas = AeneasWrapper()
+
+    def create_export_folder(self) -> None:
+        """Method to create the export folder"""
+
+        if not os.path.exists(self.export_path):
+            os.makedirs(self.export_path)
+
+        if not os.path.exists(f"{self.export_path}/audio"):
+            os.makedirs(f"{self.export_path}/audio")
+
+        if not os.path.exists(f"{self.export_path}/lyrics"):
+            os.makedirs(f"{self.export_path}/lyrics")
+
+    def remove_export_folder(self) -> None:
+        """Method to remove the export folder"""
+
+        if os.path.exists(self.export_path):
+            os.rmdir(self.export_path)
+
+    def _split_audio(
+        self, audio_path: str, split_windows: int = 32
+    ) -> List[AudioSegment]:
+        """Method to split audio into 32 seconds segments
 
         Args:
             audio_path (str): the path to the audio file
-            lyric_path (str): the path to the lyric file
-
-        Raises:
-            AeneasAlignError: if Aeneas fails to align lyrics
+            split_windows (int, optional): the size of the split window in seconds. Defaults to 32.
 
         Returns:
-            dict: a dictionary containing the alignment data
+            list: a list of AudioSegment that contain audio split into 32 seconds segments
         """
 
-        return aeneas_cli_exec(audio_path, lyric_path)
+        audio = AudioSegment.from_file(audio_path)
+        segments = []
 
-    def _split_audio(
+        for i in range(0, len(audio), split_windows * 1000):
+            segments.append(audio[i : i + split_windows * 1000])
+
+        return segments
+
+    def _split_lyric(
         self, lyric_path: str, alignement: dict, split_windows: int = 32
-    ) -> list:
+    ) -> List[str]:
         """Method to split audio into 32 seconds segments with the corresponding lyrics
 
         Args:
@@ -43,15 +90,15 @@ class Process:
             list: a list of list that contain lyrics split into 32 seconds segments
         """
 
-        lyric = open(lyric_path, "r", encoding="utf-8").read()
+        with open(lyric_path, "r", encoding="utf-8") as f:
+            lyric = f.read()
 
         segments = []
         start_idx = 0
         end_idx = 0
 
         for fragment in alignement["fragments"]:
-            print(fragment)
-            end_idx = lyric.find(fragment["lines"][0], start_idx)
+            end_idx = lyric.find(fragment["lines"][0], end_idx)
             windows = (len(segments) + 1) * split_windows
 
             if float(fragment["begin"]) > windows:
@@ -60,25 +107,76 @@ class Process:
 
         segments.append(lyric[start_idx:])
 
-        print(segments, len(segments))
+        return segments
 
-    def process(self) -> None:
-        """Method to process the dataset :
-        1. Align lyrics with audio
-        2. Split audio into 32 seconds segments
-        3. Save the segments to the dataset/audio/processed folder in .wav format
+    def _export_audio(self, audios: List[AudioSegment], file_name: str) -> None:
+        """Method to export audio segments to .wav format
+
+        Args:
+            audios (List[AudioSegment]): a list of AudioSegment
+            file_name (str): the name of the file
         """
 
-        for audio_f in os.listdir(self.audio_path):
+        for i, audio in enumerate(audios):
+            path = f"{self.audio_path}/{file_name}_{i}.wav"
+
+            if self.export_path:
+                path = f"{self.export_path}/audio/{file_name}_{i}.wav"
+
+            audio.export(path, format="wav")
+
+    def _export_lyric(self, lyrics: List[str], file_name: str) -> None:
+        """Method to export lyrics segments to .txt format
+
+        Args:
+            lyrics (List[str]): a list of lyrics
+            file_name (str): the name of the file
+        """
+
+        for i, lyric in enumerate(lyrics):
+            path = f"{self.lyric_path}/{file_name}_{i}.txt"
+
+            if self.export_path:
+                path = f"{self.export_path}/lyrics/{file_name}_{i}.txt"
+
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(lyric)
+
+    def process(self, remove: bool = False) -> None:
+        """Method to process the dataset
+            1. Align lyrics with audio
+            2. Split audio into 32 seconds segments
+            3. Save the segments to the dataset/audio/processed folder in .wav format
+
+        Args:
+            remove (bool, optional): remove the processed file. Defaults to False.
+        """
+
+        nbm_files = len(os.listdir(self.audio_path))
+        for i, audio_f in enumerate(os.listdir(self.audio_path)):
+            if not audio_f.endswith(".ogg") and not audio_f.endswith(".mp4"):
+                continue
+
             audio_path = os.path.join(self.audio_path, audio_f)
             lyric_path = os.path.join(self.lyric_path, audio_f.split(".")[0] + ".txt")
 
             try:
-                alignement = self._aenas_align(audio_path, lyric_path)
+                alignement = self.aeneas.aeneas_cli_exec(audio_path, lyric_path)
             except dataset.exceptions.AeneasAlignError as e:
                 print(f"Failed to align {audio_f}: {e}")
                 continue
 
-            self._split_audio(lyric_path, alignement)
+            lyric_segments = self._split_lyric(lyric_path, alignement)
+            audio_segments = self._split_audio(audio_path)
 
-            break
+            # save the audio segments and the lyrics
+            self._export_audio(audio_segments, audio_f.split(".")[0])
+            self._export_lyric(lyric_segments, audio_f.split(".")[0])
+
+            print(
+                f"Processed {i}/ {nbm_files} - {round(i/nbm_files*100, 2)}%", end="\r"
+            )
+
+            if remove:
+                os.remove(lyric_path)
+                os.remove(audio_path)
