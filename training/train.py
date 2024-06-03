@@ -1,6 +1,7 @@
 """
 This module contains the Trainer class which is responsible for training whisper on predicting lyrics.
 """
+
 import warnings
 
 import evaluate
@@ -8,7 +9,12 @@ import librosa
 import numpy as np
 import torch
 from datasets import Dataset
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, Seq2SeqTrainingArguments, Seq2SeqTrainer
+from transformers import (
+    WhisperProcessor,
+    WhisperForConditionalGeneration,
+    Seq2SeqTrainingArguments,
+    Seq2SeqTrainer,
+)
 from transformers.models.whisper.english_normalizer import BasicTextNormalizer
 
 from training.collator import DataCollatorSpeechSeq2SeqWithPadding
@@ -22,17 +28,19 @@ class Trainer:
     """
     A class that represents the trainer for the whisper model.
     """
-    def __init__(self, dataset=None, model_name="openai/whisper-small", ):
+
+    def __init__(
+        self,
+        dataset=None,
+        model_name="openai/whisper-small",
+    ):
         """
         The constructor for the Trainer class.
         The dataset is optional and can be added later with the method process_dataset.
         The dataset should be formated and already mapped to the columns "audio" and "lyrics" and ready for training.
         :param dataset: The dataset to train the model on.
         """
-        self.processor = WhisperProcessor.from_pretrained(
-            model_name,
-            task="transcribe"
-        )
+        self.processor = WhisperProcessor.from_pretrained(model_name, task="transcribe")
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         self.dataset = dataset
         self.data_collator = DataCollatorSpeechSeq2SeqWithPadding(self.processor)
@@ -48,7 +56,9 @@ class Trainer:
             special_tokens_to_add.append(f"[VERSE {i}]")
         special_tokens_to_add.append("[CHORUS]")
         special_tokens_to_add.append("[BRIDGE]")
-        self.processor.tokenizer.add_special_tokens({"additional_special_tokens": special_tokens_to_add})
+        self.processor.tokenizer.add_special_tokens(
+            {"additional_special_tokens": special_tokens_to_add}
+        )
         self.model.resize_token_embeddings(len(self.processor.tokenizer))
 
     def process_dataset(self, dataset, chunk_id) -> Dataset:
@@ -56,6 +66,7 @@ class Trainer:
         A method that processes the dataset.
         :return: None
         """
+
         def prepare_dataset(example):
             target_sr = self.processor.feature_extractor.sampling_rate
             with warnings.catch_warnings():
@@ -110,7 +121,9 @@ class Trainer:
         label_str_norm = [NORMALIZER(label) for label in label_str]
         # filtering step to only evaluate the samples that correspond to non-zero references:
         pred_str_norm = [
-            pred_str_norm[i] for i in range(len(pred_str_norm)) if len(label_str_norm[i]) > 0
+            pred_str_norm[i]
+            for i in range(len(pred_str_norm))
+            if len(label_str_norm[i]) > 0
         ]
         label_str_norm = [
             label_str_norm[i]
@@ -159,3 +172,12 @@ class Trainer:
             tokenizer=self.processor,
         )
         return trainer.train()
+
+    def save_model(self, path: str) -> None:
+        """
+        A method that saves the model.
+        :param path: The path to save the model.
+        :return: None
+        """
+
+        self.model.save_pretrained(path)

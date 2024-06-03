@@ -159,11 +159,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-dataset/audio/
-dataset/lyrics/
-dataset/data.json
 train/
 model/
 formated_dataset/
 
 test.py
+
+dataset/
+save.py

@@ -4,7 +4,7 @@ from dataset.build import SonautoAPI
 
 
 parser = argparse.ArgumentParser(
-    description="Download images from Sonauto dataset",
+    description="Download music from Sonauto API",
 )
 parser.add_argument("--num_images", type=int, default=10000)
 parser.add_argument("--clean", type=bool, default=True)

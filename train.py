@@ -1,21 +1,11 @@
-from datasets import DatasetDict
-
+from training import utils
 from training.train import Trainer
 
-from training import utils
+dataset = utils.gather_dataset("./dataset/export")
+dataset = dataset.train_test_split(test_size=0.1)
 
-LOAD_DATASET = True
-
-if LOAD_DATASET:
-    dataset = utils.gather_dataset("./dataset")
-else:
-    dataset = DatasetDict.load_from_disk("./formated_dataset")
 trainer = Trainer(dataset)
-if LOAD_DATASET:
-    for i in range(dataset.num_rows//1000):
-        dataset = trainer.process_dataset(dataset, i)
-        dataset.save_to_disk(f"./formated_dataset_{i}")
-
+dataset = trainer.process_dataset(dataset)
 trainer.train()
 trainer.model.save_pretrained("./model")
 trainer.processor.save_pretrained("./model")

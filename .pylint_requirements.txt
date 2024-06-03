@@ -10,5 +10,4 @@ bitsandbytes
 evaluate
 librosa
 numpy
-aeneas
-pydub
+
