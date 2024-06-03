@@ -3,6 +3,7 @@ This module contains the Trainer class which is responsible for training whisper
 """
 
 import warnings
+from functools import partial
 
 import evaluate
 import librosa
@@ -44,7 +45,7 @@ class Trainer:
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         self.dataset = dataset
         self.data_collator = DataCollatorSpeechSeq2SeqWithPadding(self.processor)
-        # self.prepare_tokenizer()
+        self.prepare_tokenizer()
 
     def prepare_tokenizer(self) -> None:
         """
@@ -140,10 +141,14 @@ class Trainer:
         A method that trains the model.
         :return:
         """
+
+        self.model.generate = partial(
+            self.model.generate, task="transcribe", use_cache=True
+        )
         training_args = Seq2SeqTrainingArguments(
             output_dir="./train",
             per_device_train_batch_size=8,
-            per_device_eval_batch_size=4,
+            per_device_eval_batch_size=8,
             num_train_epochs=1,
             learning_rate=1e-5,
             lr_scheduler_type="linear",
@@ -156,7 +161,7 @@ class Trainer:
             evaluation_strategy="epoch",
             optim="adamw_8bit",
             predict_with_generate=True,
-            generation_max_length=512,
+            generation_max_length=350,
             logging_steps=25,
             metric_for_best_model="wer",
             greater_is_better=False,
@@ -168,7 +173,7 @@ class Trainer:
             train_dataset=self.dataset["train"],
             eval_dataset=self.dataset["test"],
             data_collator=self.data_collator,
-            # compute_metrics=self.compute_metrics,
+            compute_metrics=self.compute_metrics,
             tokenizer=self.processor,
         )
         return trainer.train()
@@ -181,3 +186,4 @@ class Trainer:
         """
 
         self.model.save_pretrained(path)
+        self.processor.save_pretrained(path)

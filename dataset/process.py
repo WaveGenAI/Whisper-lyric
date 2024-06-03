@@ -60,7 +60,7 @@ class DatasetProcess:
             shutil.rmtree(self.export_path)
 
     def _split_audio(
-        self, audio_path: str, split_windows: int = 32
+        self, audio_path: str, split_windows: int = 30
     ) -> List[AudioSegment]:
         """Method to split audio into 32 seconds segments
 
@@ -81,7 +81,7 @@ class DatasetProcess:
         return segments
 
     def _split_lyric(
-        self, lyric_path: str, alignement: dict, split_windows: int = 32
+        self, lyric_path: str, alignement: dict, split_windows: int = 30
     ) -> List[str]:
         """Method to split audio into 32 seconds segments with the corresponding lyrics
 
