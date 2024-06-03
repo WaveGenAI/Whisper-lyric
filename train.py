@@ -36,13 +36,18 @@ if args.process_ds_path:
     dataset = utils.gather_dataset(args.process_ds_path)
     chuck_ds = []
     trainer = Trainer(dataset)
+    i = 0
     for i in range(len(dataset) // 1000):
         ds = trainer.process_dataset(dataset, i)
         ds.save_to_disk(f"./dataset/process/{i}")
         chuck_ds.append(ds)
 
+    ds = trainer.process_dataset(dataset, -1)
+    ds.save_to_disk(f"./dataset/process/{i+1}")
+    chuck_ds.append(ds)
+
     dataset = concatenate_datasets(chuck_ds)
-    trainer.dataset = dataset.train_test_split(test_size=0.1)
+    trainer.dataset = dataset.train_test_split(test_size=0.05)
 elif args.chunked_ds_path:
     chuck_ds = []
     nb_chunks = len(glob.glob(f"{args.chunked_ds_path}/*"))
@@ -50,7 +55,7 @@ elif args.chunked_ds_path:
         ds = Dataset.load_from_disk(f"{args.chunked_ds_path}/{i}")
         chuck_ds.append(ds)
     dataset = concatenate_datasets(chuck_ds)
-    dataset = dataset.train_test_split(test_size=0.1)
+    dataset = dataset.train_test_split(test_size=0.05)
     trainer = Trainer(dataset)
 else:
     raise ValueError("You must provide either --process_ds_path or --chunked_ds_path")

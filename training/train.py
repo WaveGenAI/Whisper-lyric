@@ -24,6 +24,9 @@ METRIC = evaluate.load("wer")
 
 NORMALIZER = BasicTextNormalizer()
 
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+
 
 class Trainer:
     """
@@ -41,7 +44,7 @@ class Trainer:
         The dataset should be formated and already mapped to the columns "audio" and "lyrics" and ready for training.
         :param dataset: The dataset to train the model on.
         """
-        self.processor = WhisperProcessor.from_pretrained(model_name, task="transcribe")
+        self.processor = WhisperProcessor.from_pretrained(model_name, language="en", task="transcribe")
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         self.dataset = dataset
         self.data_collator = DataCollatorSpeechSeq2SeqWithPadding(self.processor)
@@ -90,11 +93,25 @@ class Trainer:
             example["input_length"] = len(audio) / sr
 
             return example
-        small_dataset = Dataset.from_dict(dataset[chunk_id*1000:chunk_id*1000+1000])
+        if chunk_id == -1:
+            last_chunk_size = len(dataset) % 1000
+            small_dataset = Dataset.from_dict(dataset[-last_chunk_size:])
+        else:
+            small_dataset = Dataset.from_dict(dataset[chunk_id*1000:chunk_id*1000+1000])
         self.dataset = small_dataset.map(
             prepare_dataset,
             remove_columns=small_dataset.column_names,
             num_proc=1,
+        )
+
+        max_input_length = 30.0
+
+        def is_audio_in_length_range(length):
+            return length < max_input_length
+
+        self.dataset = self.dataset.filter(
+            is_audio_in_length_range,
+            input_columns=["input_length"],
         )
         return self.dataset
 
@@ -143,13 +160,13 @@ class Trainer:
         """
 
         self.model.generate = partial(
-            self.model.generate, task="transcribe", use_cache=True
+            self.model.generate, language="en", task="transcribe", use_cache=True
         )
         training_args = Seq2SeqTrainingArguments(
             output_dir="./train",
-            per_device_train_batch_size=8,
+            per_device_train_batch_size=10,
             per_device_eval_batch_size=8,
-            num_train_epochs=1,
+            num_train_epochs=3,
             learning_rate=1e-5,
             lr_scheduler_type="linear",
             warmup_steps=50,
@@ -158,7 +175,8 @@ class Trainer:
             bf16=torch.cuda.is_bf16_supported(),
             bf16_full_eval=torch.cuda.is_bf16_supported(),
             fp16_full_eval=not torch.cuda.is_bf16_supported(),
-            evaluation_strategy="epoch",
+            evaluation_strategy="steps",
+            eval_steps=75,
             optim="adamw_8bit",
             predict_with_generate=True,
             generation_max_length=350,
