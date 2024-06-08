@@ -2,33 +2,28 @@
 This file contains the data collator for the Speech2Text model.
 """
 
-from dataclasses import dataclass
-from typing import Any, Dict, Union, List
-
 import torch
+
+from dataclasses import dataclass
+from typing import Any, Dict, List, Union
 
 
 @dataclass
 class DataCollatorSpeechSeq2SeqWithPadding:
-    """
-    Data collator that will dynamically pad the inputs received.
-    """
     processor: Any
+    decoder_start_token_id: int
 
     def __call__(
         self, features: List[Dict[str, Union[List[int], torch.Tensor]]]
     ) -> Dict[str, torch.Tensor]:
-        """
-        This method pads the input features and the labels to the maximum length in the batch and return it.
-        :param features: The features to pad.
-        :return: The padded features.
-        """
         # split inputs and labels since they have to be of different lengths and need different padding methods
         # first treat the audio inputs by simply returning torch tensors
         input_features = [
-            {"input_features": feature["input_features"][0]} for feature in features
+            {"input_features": feature["input_features"]} for feature in features
         ]
-        batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
+        batch = self.processor.feature_extractor.pad(
+            input_features, return_tensors="pt"
+        )
 
         # get the tokenized label sequences
         label_features = [{"input_ids": feature["labels"]} for feature in features]
@@ -42,7 +37,7 @@ class DataCollatorSpeechSeq2SeqWithPadding:
 
         # if bos token is appended in previous tokenization step,
         # cut bos token here as it's append later anyways
-        if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
+        if (labels[:, 0] == self.decoder_start_token_id).all().cpu().item():
             labels = labels[:, 1:]
 
         batch["labels"] = labels

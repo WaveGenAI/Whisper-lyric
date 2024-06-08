@@ -167,3 +167,6 @@ test.py
 
 dataset/
 save.py
+
+whisper-finetuned/
+whisper-small-hi/
