@@ -1,56 +1,41 @@
-from datasets import load_dataset, DatasetDict
-from datasets import Audio
+import librosa
+import numpy as np
+from datasets import Audio, DatasetDict, load_dataset
 
+from training import utils
 from training.train import Trainer
 
-common_voice = DatasetDict()
+DS_PATH = "dataset/"
 
-common_voice["train"] = load_dataset(
-    "mozilla-foundation/common_voice_11_0",
-    "hi",
-    split="train+validation",
-    use_auth_token=True,
-)
-common_voice["test"] = load_dataset(
-    "mozilla-foundation/common_voice_11_0", "hi", split="test", use_auth_token=True
-)
-
-
-common_voice = common_voice.remove_columns(
-    [
-        "accent",
-        "age",
-        "client_id",
-        "down_votes",
-        "gender",
-        "locale",
-        "path",
-        "segment",
-        "up_votes",
-    ]
-)
-
-common_voice = common_voice.cast_column("audio", Audio(sampling_rate=16000))
-
+dataset = utils.gather_dataset(DS_PATH)
 trainer = Trainer()
 
+is_prepared = False
 
-def prepare_dataset(batch):
-    # load and resample audio data from 48 to 16kHz
-    audio = batch["audio"]
+if not is_prepared:
+    target_sr = trainer.processor.feature_extractor.sampling_rate
 
-    # compute log-Mel input features from input audio array
-    batch["input_features"] = trainer.feature_extractor(
-        audio["array"], sampling_rate=audio["sampling_rate"]
-    ).input_features[0]
+    def prepare_dataset(batch):
+        # load and resample audio data from 48 to 16kHz
+        audio, _ = librosa.load(batch["audio"], sr=target_sr)
 
-    # encode target text to label ids
-    batch["labels"] = trainer.tokenizer(batch["sentence"]).input_ids
-    return batch
+        # compute log-Mel input features from input audio array
+        batch["input_features"] = trainer.feature_extractor(
+            audio, sampling_rate=target_sr
+        ).input_features[0]
 
+        # encode target text to label ids
+        batch["labels"] = trainer.tokenizer(batch["lyrics"]).input_ids
+        return batch
 
-common_voice = common_voice.map(
-    prepare_dataset, remove_columns=common_voice.column_names["train"], num_proc=1
-)
+    dataset = dataset.map(prepare_dataset, num_proc=1)
 
-trainer.train(common_voice)
+    # save the processed dataset
+    dataset.save_to_disk("dataset/test/")
+
+else:
+    # load the processed dataset
+    dataset = load_dataset("dataset/test/")
+
+dataset = dataset.train_test_split(test_size=0.05)
+trainer.train(dataset)

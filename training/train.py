@@ -71,7 +71,7 @@ class Trainer:
         label_str = self.tokenizer.batch_decode(label_ids, skip_special_tokens=True)
 
         wer = 100 * self.metric.compute(predictions=pred_str, references=label_str)
-
+        print(f"WER: {wer}")
         return {"wer": wer}
 
     def train(self, dataset):
@@ -93,8 +93,8 @@ class Trainer:
             per_device_eval_batch_size=8,
             predict_with_generate=True,
             generation_max_length=225,
-            save_steps=10,
-            eval_steps=10,
+            save_steps=80,
+            eval_steps=40,
             logging_steps=25,
             report_to=["tensorboard"],
             load_best_model_at_end=True,
