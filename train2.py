@@ -1,6 +1,6 @@
 import librosa
 import numpy as np
-from datasets import Audio, DatasetDict, load_dataset
+from datasets import Audio, DatasetDict, load_from_disk
 
 from training import utils
 from training.train import Trainer
@@ -11,6 +11,7 @@ dataset = utils.gather_dataset(DS_PATH)
 trainer = Trainer()
 
 is_prepared = False
+
 
 if not is_prepared:
     target_sr = trainer.processor.feature_extractor.sampling_rate
@@ -28,14 +29,21 @@ if not is_prepared:
         batch["labels"] = trainer.tokenizer(batch["lyrics"]).input_ids
         return batch
 
-    dataset = dataset.map(prepare_dataset, num_proc=1)
+    dataset = dataset.map(
+        prepare_dataset, remove_columns=dataset.column_names, num_proc=1
+    )
+
+    # filter out samples with empty labels
+    dataset = dataset.filter(lambda x: len(x["labels"]) > 5)
 
     # save the processed dataset
     dataset.save_to_disk("dataset/test/")
 
 else:
     # load the processed dataset
-    dataset = load_dataset("dataset/test/")
+    dataset = load_from_disk("dataset/test/")
+
+print(dataset)
 
 dataset = dataset.train_test_split(test_size=0.05)
 trainer.train(dataset)

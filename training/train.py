@@ -10,9 +10,12 @@ from transformers import (
     WhisperForConditionalGeneration,
     WhisperProcessor,
     WhisperTokenizer,
+    logging,
 )
 
 from training.collator import DataCollatorSpeechSeq2SeqWithPadding
+
+logging.set_verbosity_warning()
 
 
 class Trainer:
@@ -23,7 +26,6 @@ class Trainer:
     def __init__(
         self,
         model_name="openai/whisper-tiny",
-        language="hindi",
         task="transcribe",
         output_dir="./whisper-finetuned",
     ):
@@ -31,22 +33,16 @@ class Trainer:
 
         Args:
             model_name (str, optional): _description_. Defaults to "openai/whisper-tiny".
-            language (str, optional): _description_. Defaults to "hindi".
             task (str, optional): _description_. Defaults to "transcribe".
             output_dir (str, optional): _description_. Defaults to "./whisper-finetuned".
         """
 
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
-        self.tokenizer = WhisperTokenizer.from_pretrained(
-            model_name, language=language, task=task
-        )
+        self.tokenizer = WhisperTokenizer.from_pretrained(model_name, task=task)
 
-        self.processor = WhisperProcessor.from_pretrained(
-            model_name, language=language, task=task
-        )
+        self.processor = WhisperProcessor.from_pretrained(model_name, task=task)
 
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
-        self.model.generation_config.language = language
         self.model.generation_config.task = task
 
         self.model.generation_config.forced_decoder_ids = None
@@ -70,8 +66,11 @@ class Trainer:
         pred_str = self.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
         label_str = self.tokenizer.batch_decode(label_ids, skip_special_tokens=True)
 
+        print(pred_str[0])
+        print(label_str[0])
+
         wer = 100 * self.metric.compute(predictions=pred_str, references=label_str)
-        print(f"WER: {wer}")
+
         return {"wer": wer}
 
     def train(self, dataset):
@@ -89,18 +88,19 @@ class Trainer:
             max_steps=4000,
             gradient_checkpointing=True,
             fp16=True,
-            evaluation_strategy="steps",
+            eval_strategy="steps",
             per_device_eval_batch_size=8,
             predict_with_generate=True,
             generation_max_length=225,
             save_steps=80,
-            eval_steps=40,
+            eval_steps=80,
             logging_steps=25,
             report_to=["tensorboard"],
             load_best_model_at_end=True,
             metric_for_best_model="wer",
             greater_is_better=False,
-            push_to_hub=True,
+            push_to_hub=False,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
         )
 
         trainer = Seq2SeqTrainer(
