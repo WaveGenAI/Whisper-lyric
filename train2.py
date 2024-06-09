@@ -1,19 +1,18 @@
 import librosa
-import numpy as np
-from datasets import Audio, DatasetDict, load_from_disk
+from datasets import load_from_disk
 
 from training import utils
 from training.train import Trainer
 
-DS_PATH = "dataset/"
+DS_PATH = "dataset/export"
 
-dataset = utils.gather_dataset(DS_PATH)
 trainer = Trainer()
 
 is_prepared = False
 
 
 if not is_prepared:
+    dataset = utils.gather_dataset(DS_PATH)
     target_sr = trainer.processor.feature_extractor.sampling_rate
 
     def prepare_dataset(batch):

@@ -18,6 +18,7 @@ def gather_dataset(path: str) -> Dataset:
     """
 
     def gen():
+        i = 2
         audios = glob.glob(path + "/audio/*")
         lyrics = glob.glob(path + "/lyrics/*.txt")
         for audio, lyric in zip(audios, lyrics):

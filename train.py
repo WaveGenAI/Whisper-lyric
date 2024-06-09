@@ -1,9 +1,9 @@
-from datasets import concatenate_datasets, Dataset
+import argparse
+
+from datasets import Dataset
 
 from training import utils
 from training.train import Trainer
-import argparse
-import glob
 
 parser = argparse.ArgumentParser(
     description="Process the dataset and train the model",
@@ -51,4 +51,4 @@ else:
 print(dataset)
 
 trainer.train()
-trainer.save_model(args.model_path)
+trainer.model.save_pretrained(args.model_path)

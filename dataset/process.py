@@ -3,6 +3,7 @@ import shutil
 from typing import List
 
 from pydub import AudioSegment
+from tqdm import tqdm
 
 import dataset.exceptions
 from dataset.aeneas_wrapper import AeneasWrapper
@@ -160,6 +161,7 @@ class DatasetProcess:
         """
 
         nbm_files = len(os.listdir(self.audio_path))
+        progress_bar = tqdm(total=nbm_files)
         for i, audio_f in enumerate(os.listdir(self.audio_path)):
             if not audio_f.endswith(".ogg") and not audio_f.endswith(".mp4"):
                 continue
@@ -180,10 +182,13 @@ class DatasetProcess:
             self._export_audio(audio_segments, audio_f.split(".")[0])
             self._export_lyric(lyric_segments, audio_f.split(".")[0])
 
-            print(
-                f"Processed {i}/ {nbm_files} - {round(i/nbm_files*100, 2)}%", end="\r"
-            )
+            # print(
+            #     f"Processed {i}/ {nbm_files} - {round(i/nbm_files*100, 2)}%", end="\r"
+            # )
 
             if remove:
                 os.remove(lyric_path)
                 os.remove(audio_path)
+
+            progress_bar.update(1)
+        progress_bar.close()
